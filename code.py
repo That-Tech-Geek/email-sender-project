@@ -6,7 +6,7 @@ from email.mime.text import MIMEText
 
 # Create a Streamlit app
 st.title("Welcome to Pareeksha!")
-st.subtitle("Automate checking which students have passed and which failed, and send them all emails at the click of a button!")
+st.write("Automate checking which students have passed and which failed, and send them all emails at the click of a button!")
 
 # Upload CSV file
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
