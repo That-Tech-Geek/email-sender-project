@@ -1,53 +1,63 @@
+import streamlit as st
+import pandas as pd
 import smtplib
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import openpyxl
-passing_score = 60
-email_server = 'smtp.gmail.com'
-email_port = 587
-email_username = 'email of user'
-email_password = 'insert app password to allow access'
-wb = openpyxl.load_workbook('C:\\Users\\91891\\OneDrive\\Desktop\\Book1.xlsx')
-sheet = wb.active
-rows = sheet.iter_rows(values_only=True)
-next(rows)  # Skip the header row
-for row in rows:
-    student_name = row[0]
-    student_score = int(row[1])
-    student_email = row[2]
-    college_dean = row[3]
-    college_name = row[4]
-    college_city = row[5]
-    if student_score >= passing_score:
-        # Define the email body with the college dean's name
-        email_body = f'Dear Parent,  \n This is to inform you that your ward, {student_name} is eligible to appear for the Final Examination of CHSE This year. We wish your ward all of the best for their exam, and in future endeavors. We advise your ward to study sincerely for the examination so that they do well and bring laurels to our institution. Our professors and Faculty are now interacting with students through extra classes so that their needs can be better identified and addressed, and we request that your ward attend the same. \nThe student has our full support for these exams, seeing that this is an important part of their careers. \nSincerely, \n{college_dean}\nDean, {college_name} {college_city}'
 
-        # Send an email to the student
-        msg = MIMEText(email_body)
-        msg['Subject'] = 'You Have Passed!'
-        msg['From'] = email_username
-        msg['To'] = student_email
+# Create a Streamlit app
+st.title("Welcome to Pareeksha!")
+st.subtitle("Automate checking which students have passed and which failed, and send them all emails at the click of a button!")
 
-        server = smtplib.SMTP(email_server, email_port)
+# Upload CSV file
+uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+
+if uploaded_file is not None:
+    # Read the CSV file
+    df = pd.read_csv(uploaded_file)
+
+    # Check which students have passed and which failed
+    passing_marks = 50  # assume passing marks is 50
+    df["Result"] = df["Marks Scored"].apply(lambda x: "Passed" if x >= passing_marks else "Failed")
+
+    # Create a table with easily identifiable distinctions
+    st.write("Student Results:")
+    st.write(df[["Name", "Roll No.", "Email ID of Guardian", "Marks Scored", "Result"]])
+
+    # Create separate tables for passed and failed students
+    passed_students = df[df["Result"] == "Passed"]
+    failed_students = df[df["Result"] == "Failed"]
+
+    st.write("Passed Students:")
+    st.write(passed_students[["Name", "Roll No.", "Email ID of Guardian", "Marks Scored"]])
+
+    st.write("Failed Students:")
+    st.write(failed_students[["Name", "Roll No.", "Email ID of Guardian", "Marks Scored"]])
+
+    # Send emails to students
+    st.write("Enter email ID and app password to send emails:")
+    email_id = st.text_input("Email ID:")
+    app_password = st.text_input("App Password:", type="password")
+
+    if st.button("Send Emails"):
+        # Create a SMTP server
+        server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
-        server.login(email_username, email_password)
-        server.sendmail(email_username, student_email, msg.as_string())
+        server.login(email_id, app_password)
+
+        # Send emails to students
+        for index, row in df.iterrows():
+            msg = MIMEMultipart()
+            msg["From"] = email_id
+            msg["To"] = row["Email ID of Guardian"]
+            msg["Subject"] = "Student Result"
+
+            if row["Result"] == "Passed":
+                body = f"Dear {row['Name']}\'s Guardian,\n\n Congratulations! {row['Name']} has passed the exam with {row['Marks Scored']} marks.\n\nBest regards,\n[Your Name]"
+            else:
+                body = f"Dear {row['Name']}\'s Guardian,\n\n Sorry to inform that {row['Name']} has failed the exam with {row['Marks Scored']} marks.\n\nBest regards,\n[Your Name]"
+
+            msg.attach(MIMEText(body, "plain"))
+            server.send_message(msg)
+
         server.quit()
-
-        print(f'Email sent to {student_name} at {student_email}')
-    else:
-        email_body = f"'Dear Parent,  \nwe regret to inform you that your ward, {student_name}, has been declared ineligible for the upcoming CHSE Examinations. However, we expect that he will appear for the exam next year with renewed vigour, and we wish to inform you that the administration and faculty of the institution will leave no stone unturned in ensuring his success next year. \nWe would recommend for you to meet {student_name}'s professors, so that you may better understand his needs, requirements and shortcomings. \nWe hope you understand the mental pressure {student_name} is going through, and we urge you not to reprimand him at present. His success is our duty, and we shall accomplish it by all means we can. \nSincerely, \n{college_dean}\nDean, {college_name} {college_city}"
-
-
-        # Send an email to the student
-        msg = MIMEText(email_body)
-        msg['Subject'] = 'You Have Not Passed'
-        msg['From'] = email_username
-        msg['To'] = student_email
-
-        server = smtplib.SMTP(email_server, email_port)
-        server.starttls()
-        server.login(email_username, email_password)
-        server.sendmail(email_username, student_email, msg.as_string())
-        server.quit()
-
-        print(f'Email sent to {student_name} at {student_email}')
+        st.write("Emails sent successfully!")
