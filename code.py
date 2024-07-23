@@ -1,7 +1,7 @@
 import streamlit as st
+import pandas as pd
 import smtplib
 from email.mime.text import MIMEText
-import openpyxl
 
 st.title("Automated Email Sender")
 
@@ -9,26 +9,23 @@ st.title("Automated Email Sender")
 email_server = 'smtp.gmail.com'
 email_port = 587
 
-email_username = st.text_input("Enter email username", type="default")
+email_username = st.text_input("Enter email username")
 email_password = st.text_input("Enter email password", type="password")
 
 excel_file = st.file_uploader("Select Excel file", type=["xlsx"])
 
 if excel_file and email_username and email_password:
-    wb = openpyxl.load_workbook(excel_file)
-    sheet = wb.active
-    rows = sheet.iter_rows(values_only=True)
-    next(rows)  # Skip the header row
+    df = pd.read_excel(excel_file)
 
     passing_score = st.number_input("Enter passing score", min_value=0, value=60)
 
-    for row in rows:
-        student_name = row[0]
-        student_score = int(row[1])
-        student_email = row[2]
-        college_dean = row[3]
-        college_name = row[4]
-        college_city = row[5]
+    for index, row in df.iterrows():
+        student_name = row["Student Name"]
+        student_score = row["Score"]
+        student_email = row["Email"]
+        college_dean = row["Dean"]
+        college_name = row["College Name"]
+        college_city = row["City"]
 
         if student_score >= passing_score:
             email_body = f'Dear Parent,  \n This is to inform you that your ward, {student_name} is eligible to appear for the Final Examination of CHSE This year. We wish your ward all of the best for their exam, and in future endeavors. We advise your ward to study sincerely for the examination so that they do well and bring laurels to our institution. Our professors and Faculty are now interacting with students through extra classes so that their needs can be better identified and addressed, and we request that your ward attend the same. \nThe student has our full support for these exams, seeing that this is an important part of their careers. \nSincerely, \n{college_dean}\nDean, {college_name} {college_city}'
